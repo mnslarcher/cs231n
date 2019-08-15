@@ -80,7 +80,16 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        X = np.c_[X, np.ones(N)] # (N, D + 1)
+        W1b1 = np.vstack([W1, b1]) # (D + 1, H)
+
+        FC1 = X.dot(W1b1) # (N, H)
+        RELU = np.maximum(FC1, 0) # (N, H)
+        
+        RELU = np.c_[RELU, np.ones(N)] # (N, H + 1)
+        W2b2 = np.vstack([W2, b2]) # (H + 1, C)
+
+        scores = RELU.dot(W2b2) # (N, C)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -98,7 +107,12 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        scores -= scores.max(axis=1, keepdims=True)
+        exp_scores = np.exp(scores)
+        P = exp_scores / exp_scores.sum(axis=1, keepdims=True)
+
+        loss = -np.log(P[range(N), y]).mean()
+        loss += reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -110,8 +124,28 @@ class TwoLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        
+        grad_W2b2 = P.copy()
+        grad_W2b2[range(N), y] -= 1 
+        grad_W2b2 = RELU.T.dot(grad_W2b2) / N
+        grad_W2b2[:-1, :] += 2 * reg * W2
+        grads['W2'] = grad_W2b2[:-1, :] # (H, C)
+        grads['b2'] = grad_W2b2[-1, :] # (C,)
 
-        pass
+        grad_scores = P.copy()
+        grad_scores[range(N), y] -= 1 # (N, C)
+        grad_scores /= N
+        
+        grad_relu =  grad_scores.dot(W2b2.T) # (N, H + 1)
+        
+        grad_fc1 = grad_relu[:, :-1]
+        grad_fc1[FC1 <= 0] = 0  # (N, H)
+        
+        grad_W1b1 = X.T.dot(grad_fc1)  # (D + 1, H)
+        grad_W1b1[:-1, :] += 2 * reg * W1
+
+        grads['W1'] = grad_W1b1[:-1, :] # (D, H)
+        grads['b1'] = grad_W1b1[-1, :] # (H,)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -139,7 +173,7 @@ class TwoLayerNet(object):
         - verbose: boolean; if true print progress during optimization.
         """
         num_train = X.shape[0]
-        iterations_per_epoch = max(num_train / batch_size, 1)
+        iterations_per_epoch = max(num_train // batch_size, 1)
 
         # Use SGD to optimize the parameters in self.model
         loss_history = []
@@ -156,7 +190,9 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            indices = np.random.choice(range(num_train), size=batch_size)
+            X_batch = X[indices, :]
+            y_batch = y[indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -171,8 +207,9 @@ class TwoLayerNet(object):
             # stored in the grads dictionary defined above.                         #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            
+            for param in self.params:
+                self.params[param] -= learning_rate * grads[param]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -218,7 +255,7 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        y_pred = np.argmax(self.loss(X), axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
