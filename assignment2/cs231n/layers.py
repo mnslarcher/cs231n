@@ -358,8 +358,14 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    x = x.T
+    sample_mean = x.mean(axis=0)
+    sample_var = x.var(axis=0)
+    x_hat = (x - sample_mean) / np.sqrt(sample_var + eps)
+    out = gamma * x_hat.T + beta
 
-    pass
+    cache = (x_hat, gamma, x, sample_var, sample_mean, eps)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -393,8 +399,15 @@ def layernorm_backward(dout, cache):
     # still apply!                                                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    
+    x_hat, gamma, x, sample_var, sample_mean, eps = cache
+    x_cen = x - sample_mean
+    sigma = np.sqrt(sample_var + eps)
+    dy = (dout * gamma).T
+    dx_cen = (dy - x_cen * (dy * x_cen).mean(axis=0) / (sample_var + eps)) / sigma
+    dx = (dx_cen - dx_cen.mean(axis=0)).T
+    dbeta = dout.sum(axis=0)
+    dgamma = (dout * x_hat.T).sum(axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

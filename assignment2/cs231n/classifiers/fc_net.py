@@ -194,6 +194,10 @@ class FullyConnectedNet(object):
           self.params['W{}'.format(i + 1)] = np.random.normal(0, weight_scale, size=(dims[i], dims[i + 1]))
           self.params['b{}'.format(i + 1)] = np.zeros(dims[i + 1])
 
+          if (i != self.num_layers - 1) and self.normalization == "batchnorm":
+            self.params['gamma{}'.format(i + 1)] = np.ones(dims[i + 1])
+            self.params['beta{}'.format(i + 1)] = np.zeros(dims[i + 1])
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -256,6 +260,7 @@ class FullyConnectedNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         affine_caches = []
         relu_caches = []
+        bn_caches = []
 
         out = X.copy()
 
@@ -263,6 +268,15 @@ class FullyConnectedNet(object):
           out, cache = affine_forward(out, self.params['W{}'.format(i)], self.params['b{}'.format(i)])
           affine_caches.append(cache)
 
+          if self.normalization=='batchnorm':
+            out, cache = batchnorm_forward(
+              out, 
+              self.params['gamma{}'.format(i)], 
+              self.params['beta{}'.format(i)],
+              self.bn_params[i - 1]
+            )
+            bn_caches.append(cache)
+          
           out, cache = relu_forward(out)
           relu_caches.append(cache)
         
@@ -296,11 +310,17 @@ class FullyConnectedNet(object):
 
         loss, out = softmax_loss(scores, y)
 
-        out, grads['W{}'.format(self.num_layers)], grads['b{}'.format(self.num_layers)] = affine_backward(out, affine_caches[self.num_layers - 1])
+        dout, grads['W{}'.format(self.num_layers)], grads['b{}'.format(self.num_layers)] = affine_backward(out, affine_caches[self.num_layers - 1])
 
         for i in range(self.num_layers - 1, 0, -1):
-          out = relu_backward(out, relu_caches[i - 1])
-          out, grads['W{}'.format(i)], grads['b{}'.format(i)] = affine_backward(out, affine_caches[i - 1])
+          dout = relu_backward(dout, relu_caches[i - 1])
+
+          if self.normalization == 'batchnorm':
+            dout, dgamma, dbeta = batchnorm_backward_alt(dout, bn_caches[i - 1])
+            grads['gamma{}'.format(i)] = dgamma
+            grads['beta{}'.format(i)] = dbeta
+
+          dout, grads['W{}'.format(i)], grads['b{}'.format(i)] = affine_backward(dout, affine_caches[i - 1])
           
           loss += 0.5 * self.reg * np.sum(self.params['W{}'.format(i)] ** 2)
           grads['W{}'.format(i)] += self.reg * self.params['W{}'.format(i)]
