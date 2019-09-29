@@ -58,7 +58,7 @@ class ThreeLayerConvNet(object):
         self.params['W1'] = np.random.normal(0, weight_scale, 
             size=(num_filters, C, filter_size, filter_size))
         self.params['b1'] = np.zeros(num_filters)
-        self.params['W2'] = np.random.normal(0, weight_scale, size=(np.prod(input_dim) // 4, hidden_dim))
+        self.params['W2'] = np.random.normal(0, weight_scale, size=(H * W * num_filters // 4, hidden_dim))
         self.params['b2'] = np.zeros(hidden_dim)
         self.params['W3'] = np.random.normal(0, weight_scale, size=(hidden_dim, num_classes))
         self.params['b3'] = np.zeros(num_classes)
@@ -132,7 +132,7 @@ class ThreeLayerConvNet(object):
             affine_cache)
         dconv_relu_pool_out, grads['W2'], grads['b2'] = affine_relu_backward(
             daffine_relu_out, affine_relu_cache)
-        _, grads['W3'], grads['b3'] = conv_relu_pool_backward(
+        _, grads['W1'], grads['b1'] = conv_relu_pool_backward(
             dconv_relu_pool_out, conv_relu_pool_cache)
         
         loss += 0.5 * self.reg * ((self.params['W1'] ** 2).sum() + 
