@@ -755,7 +755,13 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+
+    x = np.moveaxis(x, 1, 3).reshape(N * H * W, C)
+
+    out, cache = batchnorm_forward(x, gamma, beta, bn_param)
+
+    out = np.moveaxis(out.reshape(N, H, W, C), 3, 1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -789,7 +795,13 @@ def spatial_batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = dout.shape
+
+    dout = np.moveaxis(dout, 1, 3).reshape(N * H * W, C)
+
+    dx, dgamma, dbeta = batchnorm_backward_alt(dout, cache)
+
+    dx = np.moveaxis(dx.reshape(N, H, W, C), 3, 1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
