@@ -820,8 +820,8 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
 
     Inputs:
     - x: Input data of shape (N, C, H, W)
-    - gamma: Scale parameter, of shape (C,)
-    - beta: Shift parameter, of shape (C,)
+    - gamma: Scale parameter, of shape (1, C, 1, 1)
+    - beta: Shift parameter, of shape (1, C, 1, 1)
     - G: Integer mumber of groups to split into, should be a divisor of C
     - gn_param: Dictionary with the following keys:
       - eps: Constant for numeric stability
@@ -841,7 +841,15 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    G_size = C // G
+    x = x.reshape(N * G, G_size * H * W).T
+    sample_mean = x.mean(axis=(0), keepdims=True)
+    sample_var = x.var(axis=(0), keepdims=True)
+    x_hat = (x - sample_mean) / np.sqrt(sample_var + eps)
+    out = gamma * x_hat.T.reshape(N, C, H, W) + beta
+
+    cache = (x_hat, gamma, x, sample_var, sample_mean, eps)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -860,8 +868,8 @@ def spatial_groupnorm_backward(dout, cache):
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs, of shape (N, C, H, W)
-    - dgamma: Gradient with respect to scale parameter, of shape (C,)
-    - dbeta: Gradient with respect to shift parameter, of shape (C,)
+    - dgamma: Gradient with respect to scale parameter, of shape (1, C, 1, 1)
+    - dbeta: Gradient with respect to shift parameter, of shape (1, C, 1, 1)
     """
     dx, dgamma, dbeta = None, None, None
 
@@ -871,7 +879,14 @@ def spatial_groupnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_hat, gamma, x, sample_var, sample_mean, eps = cache
+    x_cen = x - sample_mean
+    sigma = np.sqrt(sample_var + eps)
+    dy = (dout * gamma).reshape(x.T.shape).T
+    dx_cen = (dy - x_cen * (dy * x_cen).mean(axis=0) / (sample_var + eps)) / sigma
+    dx = (dx_cen - dx_cen.mean(axis=0)).T.reshape(dout.shape)
+    dbeta = dout.sum(axis=(0, 2, 3), keepdims=True)
+    dgamma = (dout * x_hat.T.reshape(dout.shape)).sum(axis=(0, 2, 3), keepdims=True)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
