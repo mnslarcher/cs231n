@@ -141,8 +141,18 @@ class CaptioningRNN(object):
         # in your implementation, if needed.                                       #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        # forward pass
+        h0, cache_affine = affine_forward(features, W_proj, b_proj)
+        x, cache_word_embedding = word_embedding_forward(captions_in, W_embed)
+        h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)
+        scores, cache_temporal_affine = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss, dscores = temporal_softmax_loss(scores, captions_out, mask, verbose=False)
+        # backward pass
+        dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dscores, cache_temporal_affine)
+        dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_rnn)
+        grads['W_embed'] = word_embedding_backward(dx, cache_word_embedding)
+        _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache_affine)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
