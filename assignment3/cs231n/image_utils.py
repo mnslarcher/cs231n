@@ -5,7 +5,9 @@ from builtins import range
 import urllib.request, urllib.error, urllib.parse, os, tempfile
 
 import numpy as np
-from scipy.misc import imread, imresize
+# from scipy.misc import imread, imresize
+from PIL import Image
+from imageio import imread
 
 """
 Utility functions used for viewing and processing images.
@@ -38,7 +40,7 @@ SQUEEZENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 def preprocess_image(img):
     """Preprocess an image for squeezenet.
-    
+
     Subtracts the pixel mean and divides by the standard deviation.
     """
     return (img.astype(np.float32)/255.0 - SQUEEZENET_MEAN) / SQUEEZENET_STD
@@ -85,5 +87,6 @@ def load_image(filename, size=None):
         min_idx = np.argmin(orig_shape)
         scale_factor = float(size) / orig_shape[min_idx]
         new_shape = (orig_shape * scale_factor).astype(int)
-        img = imresize(img, scale_factor)
+        # img = imresize(img, scale_factor)
+        img = np.array(Image.fromarray(img).resize(new_shape))
     return img
